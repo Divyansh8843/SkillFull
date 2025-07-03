@@ -49,14 +49,14 @@ async function executeQuery(query, params = []) {
         }
 
         const result = await client.query(pgQuery, params);
-        return result.rows;  // Return rows directly for PostgreSQL
+        return result.rows; // Return rows directly for PostgreSQL
       } finally {
         client.release();
       }
     } else {
       // MySQL query
       const [rows] = await pool.execute(query, params);
-      return rows;  // Return rows directly for MySQL
+      return rows; // Return rows directly for MySQL
     }
   } catch (error) {
     console.error("Database query error:", error);
@@ -87,8 +87,8 @@ async function testConnection() {
 
 // Create a unified interface
 const database = {
-  executeQuery: executeQuery,  // Add this method
-  execute: executeQuery,       // Keep for backward compatibility
+  executeQuery: executeQuery, // Add this method
+  execute: executeQuery, // Keep for backward compatibility
   getConnection: async () => ({
     execute: executeQuery,
     executeQuery: executeQuery,
