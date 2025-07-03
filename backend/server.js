@@ -50,9 +50,30 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
 
-// Health check
+// Health check endpoints
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "OK", 
+    timestamp: new Date().toISOString(),
+    service: "SkillWave Backend API"
+  });
+});
+
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: "OK", 
+    timestamp: new Date().toISOString(),
+    service: "SkillWave Backend API"
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({ 
+    message: "SkillWave Backend API is running",
+    status: "OK",
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Socket.io for real-time messaging
