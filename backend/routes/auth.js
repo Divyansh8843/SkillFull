@@ -61,9 +61,10 @@ router.post(
           [googleId, email, name, picture]
         );
 
-        const newUser = await db.executeQuery("SELECT * FROM users WHERE id = ?", [
-          googleId,
-        ]);
+        const newUser = await db.executeQuery(
+          "SELECT * FROM users WHERE id = ?",
+          [googleId]
+        );
         user = newUser[0];
       }
 
