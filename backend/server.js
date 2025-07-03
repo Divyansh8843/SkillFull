@@ -7,8 +7,8 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
 
-// Try to use mock database if MySQL is not available
-const createDatabaseConnection = require("./config/database-mock");
+// Use production database configuration (supports both PostgreSQL and MySQL)
+const db = require("./config/database-production");
 
 const authRoutes = require("./routes/auth");
 const requestRoutes = require("./routes/requests");
@@ -51,20 +51,46 @@ app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
 
 // Health check endpoints
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    service: "SkillWave Backend API",
-  });
+app.get("/health", async (req, res) => {
+  try {
+    // Test database connection
+    await db.executeQuery("SELECT 1");
+    res.status(200).json({
+      status: "OK",
+      timestamp: new Date().toISOString(),
+      service: "SkillWave Backend API",
+      database: "Connected",
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "Service Unavailable",
+      timestamp: new Date().toISOString(),
+      service: "SkillWave Backend API",
+      database: "Disconnected",
+      error: error.message,
+    });
+  }
 });
 
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    service: "SkillWave Backend API",
-  });
+app.get("/api/health", async (req, res) => {
+  try {
+    // Test database connection
+    await db.executeQuery("SELECT 1");
+    res.status(200).json({
+      status: "OK",
+      timestamp: new Date().toISOString(),
+      service: "SkillWave Backend API",
+      database: "Connected",
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "Service Unavailable",
+      timestamp: new Date().toISOString(),
+      service: "SkillWave Backend API",
+      database: "Disconnected",
+      error: error.message,
+    });
+  }
 });
 
 // Root endpoint

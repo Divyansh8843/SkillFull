@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const createDatabaseConnection = require("../config/database-mock");
+const db = require("../config/database-production");
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -39,10 +39,9 @@ router.post(
       }
 
       const { email, name, googleId, picture } = req.body;
-      const db = await createDatabaseConnection;
 
       // Check if user exists
-      const [existingUsers] = await db.execute(
+      const existingUsers = await db.executeQuery(
         "SELECT * FROM users WHERE email = ? OR id = ?",
         [email, googleId]
       );
@@ -51,18 +50,18 @@ router.post(
       if (existingUsers.length > 0) {
         // Update existing user
         user = existingUsers[0];
-        await db.execute(
+        await db.executeQuery(
           "UPDATE users SET name = ?, picture_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
           [name, picture, user.id]
         );
       } else {
         // Create new user
-        await db.execute(
+        await db.executeQuery(
           "INSERT INTO users (id, email, name, picture_url) VALUES (?, ?, ?, ?)",
           [googleId, email, name, picture]
         );
 
-        const [newUser] = await db.execute("SELECT * FROM users WHERE id = ?", [
+        const newUser = await db.executeQuery("SELECT * FROM users WHERE id = ?", [
           googleId,
         ]);
         user = newUser[0];
@@ -102,8 +101,7 @@ router.post(
 // Get current user profile
 router.get("/profile", authenticateToken, async (req, res) => {
   try {
-    const db = await createDatabaseConnection;
-    const [users] = await db.execute("SELECT * FROM users WHERE id = ?", [
+    const users = await db.executeQuery("SELECT * FROM users WHERE id = ?", [
       req.user.id,
     ]);
 

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
-const createDatabaseConnection = require("../config/database-mock");
+const db = require("../config/database-production");
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -25,7 +25,6 @@ const authenticateToken = async (req, res, next) => {
 // Get all help requests
 router.get("/", async (req, res) => {
   try {
-    const db = await createDatabaseConnection;
     const { category, urgency, status = "open", search } = req.query;
 
     let query = `
@@ -60,7 +59,7 @@ router.get("/", async (req, res) => {
 
     query += " ORDER BY hr.created_at DESC";
 
-    const [requests] = await db.execute(query, params);
+    const requests = await db.executeQuery(query, params);
 
     const formattedRequests = requests.map((request) => ({
       id: request.id,
@@ -130,12 +129,10 @@ router.post(
         skillsNeeded = [],
       } = req.body;
 
-      const db = await createDatabaseConnection;
-
       // Get or create category
       let categoryId = null;
       if (category) {
-        const [categories] = await db.execute(
+        const categories = await db.executeQuery(
           "SELECT id FROM categories WHERE name = ?",
           [category]
         );
@@ -144,7 +141,7 @@ router.post(
           categoryId = categories[0].id;
         } else {
           // Create new category
-          const [result] = await db.execute(
+          const result = await db.executeQuery(
             "INSERT INTO categories (name, description) VALUES (?, ?)",
             [category, `${category} related requests`]
           );
@@ -153,7 +150,7 @@ router.post(
       }
 
       // Insert help request
-      const [result] = await db.execute(
+      const result = await db.executeQuery(
         `INSERT INTO help_requests 
          (requester_id, category_id, title, description, skills_needed, urgency, 
           estimated_duration, location, is_remote, budget_min, budget_max) 
@@ -207,10 +204,8 @@ router.post("/:id/accept", authenticateToken, async (req, res) => {
     const requestId = req.params.id;
     const helperId = req.user.id;
 
-    const db = await createDatabaseConnection;
-
     // Check if request exists and is open
-    const [requests] = await db.execute(
+    const requests = await db.executeQuery(
       "SELECT * FROM help_requests WHERE id = ? AND status = 'open'",
       [requestId]
     );
@@ -229,13 +224,13 @@ router.post("/:id/accept", authenticateToken, async (req, res) => {
     }
 
     // Update request status
-    await db.execute(
+    await db.executeQuery(
       "UPDATE help_requests SET status = 'in_progress', helper_id = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?",
       [helperId, requestId]
     );
 
     // Get updated request with user details
-    const [updatedRequests] = await db.execute(
+    const updatedRequests = await db.executeQuery(
       `SELECT 
          hr.*,
          c.name as category_name,
@@ -281,9 +276,8 @@ router.post("/:id/accept", authenticateToken, async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const requestId = req.params.id;
-    const db = await createDatabaseConnection;
 
-    const [requests] = await db.execute(
+    const requests = await db.executeQuery(
       `SELECT 
          hr.*,
          c.name as category_name,
