@@ -52,27 +52,27 @@ app.use("/api/requests", requestRoutes);
 
 // Health check endpoints
 app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "OK", 
+  res.status(200).json({
+    status: "OK",
     timestamp: new Date().toISOString(),
-    service: "SkillWave Backend API"
+    service: "SkillWave Backend API",
   });
 });
 
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ 
-    status: "OK", 
+  res.status(200).json({
+    status: "OK",
     timestamp: new Date().toISOString(),
-    service: "SkillWave Backend API"
+    service: "SkillWave Backend API",
   });
 });
 
 // Root endpoint
 app.get("/", (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     message: "SkillWave Backend API is running",
     status: "OK",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
