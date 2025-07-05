@@ -1,5 +1,10 @@
 // Demo data for production deployment
 export const initializeDemoData = () => {
+  // Check if we're in browser environment
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+
   if (!localStorage.getItem("helpRequests")) {
     const demoRequests = [
       {

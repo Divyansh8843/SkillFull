@@ -11,49 +11,54 @@ import SendRequest from "./pages/SendRequest";
 import AcceptRequest from "./pages/AcceptRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
 // Google OAuth Client ID
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-// Initialize demo data for production
-initializeDemoData();
+const App = () => {
+  // Initialize demo data after component mounts (client-side only)
+  useEffect(() => {
+    initializeDemoData();
+  }, []);
 
-const App = () => (
-  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route
-                path="/send-request"
-                element={
-                  <ProtectedRoute>
-                    <SendRequest />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/accept-request"
-                element={
-                  <ProtectedRoute>
-                    <AcceptRequest />
-                  </ProtectedRoute>
-                }
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </GoogleOAuthProvider>
-);
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route
+                  path="/send-request"
+                  element={
+                    <ProtectedRoute>
+                      <SendRequest />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/accept-request"
+                  element={
+                    <ProtectedRoute>
+                      <AcceptRequest />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
+  );
+};
 
 export default App;
