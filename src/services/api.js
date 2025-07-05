@@ -1,5 +1,5 @@
 const API_BASE_URL = import.meta.env.PROD
-  ? "https://your-backend-url.com/api" // You'll update this after deploying backend
+  ? "https://YOUR-BACKEND-URL.vercel.app/api" // Replace with actual backend URL
   : "http://localhost:3001/api";
 
 class ApiService {
