@@ -1,4 +1,4 @@
-// Demo data for production
+// Demo data for production deployment
 export const initializeDemoData = () => {
   if (!localStorage.getItem("helpRequests")) {
     const demoRequests = [
