@@ -169,7 +169,7 @@ app.use("*", (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Socket.io server ready for connections`);
