@@ -1,4 +1,6 @@
-const API_BASE_URL = "https://skilledgeapi2025.loca.lt/api";
+const API_BASE_URL = import.meta.env.PROD
+  ? "https://your-backend-url.com/api" // You'll update this after deploying backend
+  : "http://localhost:3001/api";
 
 class ApiService {
   constructor() {
