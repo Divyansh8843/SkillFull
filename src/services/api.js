@@ -1,5 +1,5 @@
 const API_BASE_URL = import.meta.env.PROD
-  ? "https://YOUR-BACKEND-URL.vercel.app/api" // Replace with actual backend URL
+  ? null // Will use localStorage fallback in production for now
   : "http://localhost:3001/api";
 
 class ApiService {
@@ -29,6 +29,11 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    // If no API_BASE_URL in production, use localStorage fallback
+    if (!API_BASE_URL) {
+      return this.handleLocalStorageFallback(endpoint, options);
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
     const config = {
       headers: this.getHeaders(),
@@ -68,6 +73,39 @@ class ApiService {
       }
       throw error;
     }
+  }
+
+  // LocalStorage fallback for production demo
+  async handleLocalStorageFallback(endpoint, options = {}) {
+    console.log("Using localStorage fallback for:", endpoint);
+
+    if (endpoint === "/requests" && options.method === "POST") {
+      // Create request
+      const requests = JSON.parse(localStorage.getItem("helpRequests") || "[]");
+      const newRequest = {
+        id: Date.now(),
+        ...JSON.parse(options.body),
+        status: "open",
+        createdAt: new Date().toISOString(),
+      };
+      requests.push(newRequest);
+      localStorage.setItem("helpRequests", JSON.stringify(requests));
+      return newRequest;
+    }
+
+    if (endpoint === "/requests" || endpoint.includes("/requests?")) {
+      // Get requests
+      const requests = JSON.parse(localStorage.getItem("helpRequests") || "[]");
+      return requests;
+    }
+
+    if (endpoint.includes("/accept")) {
+      // Accept request
+      return { success: true, message: "Request accepted" };
+    }
+
+    // Default fallback
+    return { success: true, data: [] };
   }
 
   // Auth methods

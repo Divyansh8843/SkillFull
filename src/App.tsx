@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./contexts/AuthContext";
+import { initializeDemoData } from "./utils/demoData";
 import Index from "./pages/Index";
 import SendRequest from "./pages/SendRequest";
 import AcceptRequest from "./pages/AcceptRequest";
@@ -15,6 +16,9 @@ const queryClient = new QueryClient();
 
 // Google OAuth Client ID
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// Initialize demo data for production
+initializeDemoData();
 
 const App = () => (
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
