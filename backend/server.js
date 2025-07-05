@@ -7,8 +7,8 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
 
-// Use production database configuration (supports both PostgreSQL and MySQL)
-const db = require("./config/database-production");
+// Use simple mock database for development
+const db = require("./config/database");
 
 const authRoutes = require("./routes/auth");
 const requestRoutes = require("./routes/requests");
@@ -17,7 +17,10 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:8000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:8000",
+      "http://localhost:8001",
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -27,7 +30,10 @@ app.use(helmet());
 app.use(compression());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:8000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:8000",
+      "http://localhost:8001",
+    ],
     credentials: true,
   })
 );

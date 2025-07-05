@@ -290,10 +290,31 @@ async function createDatabaseConnection() {
     console.log("Database connected successfully (MySQL)");
     connection.release();
 
-    return pool;
+    return {
+      executeQuery: async (query, params) => {
+        const [rows] = await pool.execute(query, params);
+        return rows;
+      },
+      execute: async (query, params) => {
+        const [rows] = await pool.execute(query, params);
+        return rows;
+      },
+      getConnection: () => pool.getConnection(),
+      testConnection: async () => {
+        const connection = await pool.getConnection();
+        connection.release();
+        return true;
+      },
+    };
   } catch (error) {
     console.log("MySQL not available, using mock database for development");
-    return new MockDatabase();
+    const mockDb = new MockDatabase();
+    return {
+      executeQuery: mockDb.execute.bind(mockDb),
+      execute: mockDb.execute.bind(mockDb),
+      getConnection: mockDb.getConnection.bind(mockDb),
+      testConnection: async () => true,
+    };
   }
 }
 

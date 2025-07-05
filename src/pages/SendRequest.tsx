@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Navigation from "../components/Navigation";
@@ -9,6 +9,8 @@ const SendRequest = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [myRequests, setMyRequests] = useState([]);
+  const [loadingMyRequests, setLoadingMyRequests] = useState(true);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -16,6 +18,31 @@ const SendRequest = () => {
     category: "",
     urgency: "medium",
   });
+
+  // Load user's previous requests
+  useEffect(() => {
+    loadMyRequests();
+  }, [user]);
+
+  const loadMyRequests = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingMyRequests(true);
+      const allRequests = await apiService.getRequests();
+
+      // Filter requests by current user's email
+      const userRequests = allRequests.filter(
+        (req) => req.requesterEmail === user.email
+      );
+
+      setMyRequests(userRequests);
+    } catch (error) {
+      console.error("Failed to load user requests:", error);
+    } finally {
+      setLoadingMyRequests(false);
+    }
+  };
 
   const categories = [
     { id: 1, name: "Programming" },
@@ -45,24 +72,56 @@ const SendRequest = () => {
 
     setLoading(true);
     try {
+      console.log("Submitting request with data:", formData);
+
       // Send request to backend API
       const response = await apiService.createRequest({
         title: formData.title,
         description: formData.description,
         category: formData.category,
         urgency: formData.urgency,
+        requesterName: user?.name || "Anonymous",
+        requesterEmail: user?.email || "anonymous@example.com",
+        requesterPicture: user?.picture || null,
       });
 
+      console.log("Request created successfully:", response);
       alert("Your help request has been posted!");
+
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        category: "",
+        urgency: "medium",
+      });
+
+      // Refresh user's requests
+      loadMyRequests();
+
+      // Navigate to accept request page
       navigate("/accept-request");
     } catch (error) {
       console.error("Failed to create request:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        response: error.response,
+      });
+
       if (error.message.includes("validation")) {
         alert(
           "Please check your input. Description must be at least 10 characters long."
         );
+      } else if (
+        error.message.includes("Failed to fetch") ||
+        error.message.includes("NetworkError")
+      ) {
+        alert(
+          "Cannot connect to server. Please make sure the backend is running on http://localhost:3001"
+        );
       } else {
-        alert("Failed to post your request. Please try again.");
+        alert(`Failed to post your request: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -217,6 +276,97 @@ const SendRequest = () => {
             </form>
           </div>
         </div>
+
+        {/* My Previous Requests Section */}
+        {user && (
+          <div className="max-w-4xl mx-auto mt-12">
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                📋 My Previous Requests
+              </h2>
+
+              {loadingMyRequests ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading your requests...</p>
+                </div>
+              ) : myRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-lg">
+                    You haven't posted any requests yet. Submit your first
+                    request above! 🚀
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {request.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              request.status === "open"
+                                ? "bg-green-100 text-green-800"
+                                : request.status === "in_progress"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}>
+                            {request.status === "open"
+                              ? "🟢 Open"
+                              : request.status === "in_progress"
+                              ? "🟡 In Progress"
+                              : "✅ Completed"}
+                          </span>
+                          {request.urgency && (
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                request.urgency === "high"
+                                  ? "bg-red-100 text-red-700"
+                                  : request.urgency === "medium"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}>
+                              {request.urgency === "high" && "🔴"}
+                              {request.urgency === "medium" && "🟡"}
+                              {request.urgency === "low" && "🟢"}{" "}
+                              {request.urgency}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-gray-600 mb-3 line-clamp-2">
+                        {request.description}
+                      </p>
+
+                      <div className="flex justify-between items-center text-sm text-gray-500">
+                        <div className="flex items-center gap-4">
+                          {request.category && (
+                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                              📚 {request.category}
+                            </span>
+                          )}
+                          <span>
+                            📅{" "}
+                            {new Date(request.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          ID: {request.id}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

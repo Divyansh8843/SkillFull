@@ -97,11 +97,30 @@ const Navigation = () => {
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={user?.picture}
-                      alt={user?.name}
-                      className="w-8 h-8 rounded-full border-2 border-cyan-400"
-                    />
+                    {user?.picture ? (
+                      <img
+                        src={user.picture}
+                        alt={user?.name}
+                        className="w-8 h-8 rounded-full border-2 border-cyan-400"
+                        onError={(e) => {
+                          console.error(
+                            "Failed to load user picture:",
+                            user.picture
+                          );
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                        onLoad={() =>
+                          console.log(
+                            "User picture loaded successfully:",
+                            user.picture
+                          )
+                        }
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full border-2 border-cyan-400 bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                        {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                      </div>
+                    )}
                     <span className="text-white font-medium">{user?.name}</span>
                   </div>
                   <button
@@ -177,11 +196,25 @@ const Navigation = () => {
                   {isAuthenticated ? (
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
-                        <img
-                          src={user?.picture}
-                          alt={user?.name}
-                          className="w-8 h-8 rounded-full border-2 border-cyan-400"
-                        />
+                        {user?.picture ? (
+                          <img
+                            src={user.picture}
+                            alt={user?.name}
+                            className="w-8 h-8 rounded-full border-2 border-cyan-400"
+                            onError={(e) => {
+                              console.error(
+                                "Failed to load user picture (mobile):",
+                                user.picture
+                              );
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full border-2 border-cyan-400 bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                            {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                          </div>
+                        )}
                         <span className="text-white font-medium">
                           {user?.name}
                         </span>

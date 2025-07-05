@@ -252,9 +252,14 @@ const AcceptRequest = () => {
                               }}>
                               {request.requesterName.charAt(0)}
                             </div>
-                            <span className="font-semibold text-gray-700">
-                              by {request.requesterName}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-700">
+                                by {request.requesterName}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                📧 {request.requesterEmail}
+                              </span>
+                            </div>
                           </div>
 
                           <span

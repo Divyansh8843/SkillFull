@@ -114,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           totalReviews: 0,
         };
 
+        console.log("Storing user data in localStorage:", user);
         setUser(user);
         localStorage.setItem("skillEdgeUser", JSON.stringify(user));
       }

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const db = require("../config/database-production");
+const db = require("../config/database");
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {

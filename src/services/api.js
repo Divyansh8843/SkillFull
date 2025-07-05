@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3001/api";
+const API_BASE_URL = "https://skilledgeapi2025.loca.lt/api";
 
 class ApiService {
   constructor() {
@@ -33,21 +33,37 @@ class ApiService {
       ...options,
     };
 
+    console.log(`Making API request to: ${url}`, {
+      method: config.method || "GET",
+      headers: config.headers,
+      body: config.body,
+    });
+
     try {
       const response = await fetch(url, config);
+
+      console.log(`API response status: ${response.status}`, response);
 
       if (!response.ok) {
         const errorData = await response
           .json()
           .catch(() => ({ error: "Request failed" }));
+        console.error("API error response:", errorData);
         throw new Error(
           errorData.error || `HTTP error! status: ${response.status}`
         );
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log("API response data:", result);
+      return result;
     } catch (error) {
       console.error("API request failed:", error);
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        throw new Error(
+          "Cannot connect to server. Please check if the backend is running."
+        );
+      }
       throw error;
     }
   }
