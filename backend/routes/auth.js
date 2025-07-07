@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const db = require("../config/database");
+const User = require("../models/User");
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -14,7 +14,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     req.user = decoded;
     next();
   } catch (error) {
@@ -41,55 +41,48 @@ router.post(
       const { email, name, googleId, picture } = req.body;
 
       // Check if user exists
-      const existingUsers = await db.executeQuery(
-        "SELECT * FROM users WHERE email = ? OR id = ?",
-        [email, googleId]
-      );
+      let user = await User.findOne({ 
+        $or: [{ email }, { googleId }] 
+      });
 
-      let user;
-      if (existingUsers.length > 0) {
+      if (user) {
         // Update existing user
-        user = existingUsers[0];
-        await db.executeQuery(
-          "UPDATE users SET name = ?, picture_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-          [name, picture, user.id]
-        );
+        user.name = name;
+        user.picture = picture;
+        await user.save();
       } else {
         // Create new user
-        await db.executeQuery(
-          "INSERT INTO users (id, email, name, picture_url) VALUES (?, ?, ?, ?)",
-          [googleId, email, name, picture]
-        );
-
-        const newUser = await db.executeQuery(
-          "SELECT * FROM users WHERE id = ?",
-          [googleId]
-        );
-        user = newUser[0];
+        user = new User({
+          googleId,
+          email,
+          name,
+          picture
+        });
+        await user.save();
       }
 
       // Generate JWT token
       const token = jwt.sign(
         {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
       );
 
       res.json({
         token,
         user: {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
-          picture: user.picture_url,
+          picture: user.picture,
           bio: user.bio,
-          skills: user.skills ? JSON.parse(user.skills) : [],
-          rating: parseFloat(user.rating),
-          totalReviews: user.total_reviews,
+          skills: user.skills,
+          rating: user.rating,
+          totalReviews: user.totalReviews,
         },
       });
     } catch (error) {
@@ -102,24 +95,21 @@ router.post(
 // Get current user profile
 router.get("/profile", authenticateToken, async (req, res) => {
   try {
-    const users = await db.executeQuery("SELECT * FROM users WHERE id = ?", [
-      req.user.id,
-    ]);
+    const user = await User.findById(req.user.id);
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const user = users[0];
     res.json({
-      id: user.id,
+      id: user._id,
       email: user.email,
       name: user.name,
-      picture: user.picture_url,
+      picture: user.picture,
       bio: user.bio,
-      skills: user.skills ? JSON.parse(user.skills) : [],
-      rating: parseFloat(user.rating),
-      totalReviews: user.total_reviews,
+      skills: user.skills,
+      rating: user.rating,
+      totalReviews: user.totalReviews,
     });
   } catch (error) {
     console.error("Profile fetch error:", error);

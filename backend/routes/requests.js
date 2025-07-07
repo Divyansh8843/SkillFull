@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
-const db = require("../config/database");
+const jwt = require("jsonwebtoken");
+const HelpRequest = require("../models/HelpRequest");
+const Category = require("../models/Category");
+const User = require("../models/User");
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -13,8 +16,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const jwt = require("jsonwebtoken");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     req.user = decoded;
     next();
   } catch (error) {
@@ -25,299 +27,238 @@ const authenticateToken = async (req, res, next) => {
 // Get all help requests
 router.get("/", async (req, res) => {
   try {
-    const { category, urgency, status = "open", search } = req.query;
-
-    let query = `
-      SELECT 
-        hr.*,
-        c.name as category_name,
-        u.name as requester_name,
-        u.email as requester_email,
-        u.picture_url as requester_picture
-      FROM help_requests hr
-      LEFT JOIN categories c ON hr.category_id = c.id
-      LEFT JOIN users u ON hr.requester_id = u.id
-      WHERE hr.status = ?
-    `;
-
-    const params = [status];
-
+    const { status, category, search } = req.query;
+    
+    let query = {};
+    
+    // Only filter by status if it's explicitly provided
+    if (status) {
+      query.status = status;
+    }
+    
     if (category) {
-      query += " AND c.name = ?";
-      params.push(category);
+      const categoryDoc = await Category.findOne({ name: category });
+      if (categoryDoc) {
+        query.category = categoryDoc._id;
+      }
     }
-
-    if (urgency) {
-      query += " AND hr.urgency = ?";
-      params.push(urgency);
-    }
-
+    
     if (search) {
-      query += " AND (hr.title LIKE ? OR hr.description LIKE ?)";
-      params.push(`%${search}%`, `%${search}%`);
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
     }
 
-    query += " ORDER BY hr.created_at DESC";
+    const requests = await HelpRequest.find(query)
+      .populate('requester', 'name email picture')
+      .populate('category', 'name description icon')
+      .populate('helper', 'name email picture')
+      .sort({ createdAt: -1 });
 
-    const requests = await db.executeQuery(query, params);
-
-    const formattedRequests = requests.map((request) => ({
-      id: request.id,
-      title: request.title,
-      description: request.description,
-      category: request.category_name,
-      urgency: request.urgency,
-      estimatedDuration: request.estimated_duration,
-      location: request.location,
-      isRemote: request.is_remote,
-      budgetMin: request.budget_min,
-      budgetMax: request.budget_max,
-      skillsNeeded: Array.isArray(request.skills_needed)
-        ? request.skills_needed
-        : request.skills_needed
-        ? JSON.parse(request.skills_needed)
-        : [],
-      status: request.status,
-      requesterName: request.requester_name,
-      requesterEmail: request.requester_email,
-      requesterPicture: request.requester_picture,
-      createdAt: request.created_at,
-      acceptedAt: request.accepted_at,
-      completedAt: request.completed_at,
-    }));
-
-    res.json(formattedRequests);
+    res.json(requests);
   } catch (error) {
     console.error("Error fetching requests:", error);
     res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
 
-// Create a new help request
-router.post(
-  "/",
-  // authenticateToken, // Temporarily disabled for testing
-  [
-    body("title").trim().isLength({ min: 1, max: 255 }),
-    body("description").trim().isLength({ min: 10 }),
-    body("category").optional().trim(),
-    body("urgency").isIn(["low", "medium", "high"]),
-    body("estimatedDuration").optional().trim(),
-    body("location").optional().trim(),
-    body("isRemote").optional().isBoolean(),
-    body("budgetMin").optional().isNumeric(),
-    body("budgetMax").optional().isNumeric(),
-    body("skillsNeeded").optional().isArray(),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const {
-        title,
-        description,
-        category,
-        urgency = "medium",
-        estimatedDuration,
-        location,
-        isRemote = true,
-        budgetMin,
-        budgetMax,
-        skillsNeeded = [],
-        requesterName,
-        requesterEmail,
-        requesterPicture,
-      } = req.body;
-
-      // Get or create category
-      let categoryId = null;
-      if (category) {
-        const categories = await db.executeQuery(
-          "SELECT id FROM categories WHERE name = ?",
-          [category]
-        );
-
-        if (categories.length > 0) {
-          categoryId = categories[0].id;
-        } else {
-          // Create new category
-          const result = await db.executeQuery(
-            "INSERT INTO categories (name, description) VALUES (?, ?)",
-            [category, `${category} related requests`]
-          );
-          categoryId = result.insertId;
-        }
-      }
-
-      // Insert help request
-      const result = await db.executeQuery(
-        `INSERT INTO help_requests 
-         (requester_id, category_id, title, description, skills_needed, urgency, 
-          estimated_duration, location, is_remote, budget_min, budget_max, 
-          requester_name, requester_email, requester_picture) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          req.user?.id || "test-user-1", // Temporary fallback for testing
-          categoryId,
-          title,
-          description,
-          JSON.stringify(skillsNeeded),
-          urgency,
-          estimatedDuration,
-          location,
-          isRemote,
-          budgetMin,
-          budgetMax,
-          requesterName || "Anonymous",
-          requesterEmail || "anonymous@example.com",
-          requesterPicture || null,
-        ]
-      );
-
-      // For now, return a simplified response since mock database doesn't handle JOINs
-      const formattedRequest = {
-        id: result.insertId,
-        title,
-        description,
-        category,
-        urgency,
-        estimatedDuration,
-        location,
-        isRemote,
-        budgetMin,
-        budgetMax,
-        skillsNeeded,
-        status: "open",
-        requesterName: requesterName || "Anonymous",
-        requesterEmail: requesterEmail || "anonymous@example.com",
-        requesterPicture: requesterPicture || null,
-        createdAt: new Date().toISOString(),
-      };
-
-      res.status(201).json(formattedRequest);
-    } catch (error) {
-      console.error("Error creating request:", error);
-      res.status(500).json({ error: "Failed to create request" });
-    }
-  }
-);
-
-// Accept a help request
-router.post(
-  "/:id/accept",
-  // authenticateToken, // Temporarily disabled for testing
-  async (req, res) => {
-    try {
-      const requestId = req.params.id;
-      const helperId = req.user?.id || "test-helper-1"; // Fallback for testing
-
-      console.log("Accept request:", { requestId, helperId });
-
-      // Check if request exists and is open
-      const requests = await db.executeQuery(
-        "SELECT * FROM help_requests WHERE id = ? AND status = 'open'",
-        [requestId]
-      );
-
-      if (requests.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Request not found or already accepted" });
-      }
-
-      const request = requests[0];
-
-      // Can't accept your own request
-      if (request.requester_id === helperId) {
-        return res
-          .status(400)
-          .json({ error: "Cannot accept your own request" });
-      }
-
-      // Update request status
-      const updateResult = await db.executeQuery(
-        "UPDATE help_requests SET status = 'in_progress', helper_id = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [helperId, requestId]
-      );
-
-      if (updateResult.affectedRows === 0) {
-        return res.status(404).json({ error: "Failed to update request" });
-      }
-
-      // For mock database, return a simplified success response
-      res.json({
-        message: "Request accepted successfully",
-        request: {
-          id: requestId,
-          status: "in_progress",
-          helperId: helperId,
-          acceptedAt: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      console.error("Error accepting request:", error);
-      res.status(500).json({ error: "Failed to accept request" });
-    }
-  }
-);
-
-// Get a specific request
+// Get single help request
 router.get("/:id", async (req, res) => {
   try {
-    const requestId = req.params.id;
+    const request = await HelpRequest.findById(req.params.id)
+      .populate('requester', 'name email picture')
+      .populate('category', 'name description icon')
+      .populate('helper', 'name email picture');
 
-    const requests = await db.executeQuery(
-      `SELECT 
-         hr.*,
-         c.name as category_name,
-         u.name as requester_name,
-         u.email as requester_email,
-         u.picture_url as requester_picture,
-         h.name as helper_name
-       FROM help_requests hr
-       LEFT JOIN categories c ON hr.category_id = c.id
-       LEFT JOIN users u ON hr.requester_id = u.id
-       LEFT JOIN users h ON hr.helper_id = h.id
-       WHERE hr.id = ?`,
-      [requestId]
-    );
-
-    if (requests.length === 0) {
+    if (!request) {
       return res.status(404).json({ error: "Request not found" });
     }
 
-    const request = requests[0];
-    const formattedRequest = {
-      id: request.id,
-      title: request.title,
-      description: request.description,
-      category: request.category_name,
-      urgency: request.urgency,
-      estimatedDuration: request.estimated_duration,
-      location: request.location,
-      isRemote: request.is_remote,
-      budgetMin: request.budget_min,
-      budgetMax: request.budget_max,
-      skillsNeeded: request.skills_needed
-        ? JSON.parse(request.skills_needed)
-        : [],
-      status: request.status,
-      requesterName: request.requester_name,
-      requesterEmail: request.requester_email,
-      requesterPicture: request.requester_picture,
-      helperName: request.helper_name,
-      createdAt: request.created_at,
-      acceptedAt: request.accepted_at,
-      completedAt: request.completed_at,
-    };
-
-    res.json(formattedRequest);
+    res.json(request);
   } catch (error) {
     console.error("Error fetching request:", error);
     res.status(500).json({ error: "Failed to fetch request" });
+  }
+});
+
+// Create new help request
+router.post("/", authenticateToken, [
+  body("title").trim().isLength({ min: 1 }),
+  body("description").trim().isLength({ min: 1 }),
+  body("categoryId").isMongoId(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const {
+      title,
+      description,
+      categoryId,
+      skillsNeeded,
+      urgency,
+      estimatedDuration,
+      location,
+      isRemote,
+      budgetMin,
+      budgetMax
+    } = req.body;
+
+    // Verify category exists
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(400).json({ error: "Invalid category" });
+    }
+
+    const newRequest = new HelpRequest({
+      requester: req.user.id,
+      category: categoryId,
+      title,
+      description,
+      skillsNeeded: skillsNeeded || [],
+      urgency: urgency || 'medium',
+      estimatedDuration,
+      location,
+      isRemote: isRemote !== false,
+      budgetMin,
+      budgetMax
+    });
+
+    await newRequest.save();
+
+    const populatedRequest = await HelpRequest.findById(newRequest._id)
+      .populate('requester', 'name email picture')
+      .populate('category', 'name description icon');
+
+    res.status(201).json(populatedRequest);
+  } catch (error) {
+    console.error("Error creating request:", error);
+    res.status(500).json({ error: "Failed to create request" });
+  }
+});
+
+// Accept help request
+router.post("/:id/accept", authenticateToken, async (req, res) => {
+  try {
+    const request = await HelpRequest.findById(req.params.id);
+    
+    if (!request) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (request.status !== 'open') {
+      return res.status(400).json({ error: "Request is not available" });
+    }
+
+    if (request.requester.toString() === req.user.id) {
+      return res.status(400).json({ error: "Cannot accept your own request" });
+    }
+
+    request.helper = req.user.id;
+    request.status = 'in_progress';
+    request.acceptedAt = new Date();
+    await request.save();
+
+    const populatedRequest = await HelpRequest.findById(request._id)
+      .populate('requester', 'name email picture')
+      .populate('category', 'name description icon')
+      .populate('helper', 'name email picture');
+
+    // Emit socket event to notify both users
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to both helper and requester
+      io.emit("request_accepted", {
+        requestId: request._id,
+        requestTitle: request.title,
+        helperId: req.user.id,
+        requesterId: request.requester.toString(),
+        helperName: req.user.name,
+        requesterName: populatedRequest.requester.name
+      });
+
+      // Also emit a status update event
+      io.emit("request_status_updated", {
+        requestId: request._id,
+        requestTitle: request.title,
+        status: 'in_progress',
+        helperId: req.user.id,
+        requesterId: request.requester.toString(),
+        helperName: req.user.name,
+        requesterName: populatedRequest.requester.name
+      });
+
+      console.log("🎉 Emitted request_accepted event for:", request.title);
+    }
+
+    res.json(populatedRequest);
+  } catch (error) {
+    console.error("Error accepting request:", error);
+    res.status(500).json({ error: "Failed to accept request" });
+  }
+});
+
+// Complete help request
+router.post("/:id/complete", authenticateToken, async (req, res) => {
+  try {
+    const request = await HelpRequest.findById(req.params.id);
+    
+    if (!request) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (request.status !== 'in_progress') {
+      return res.status(400).json({ error: "Request is not in progress" });
+    }
+
+    if (request.helper.toString() !== req.user.id) {
+      return res.status(403).json({ error: "Only the helper can complete this request" });
+    }
+
+    request.status = 'completed';
+    request.completedAt = new Date();
+    await request.save();
+
+    const populatedRequest = await HelpRequest.findById(request._id)
+      .populate('requester', 'name email picture')
+      .populate('category', 'name description icon')
+      .populate('helper', 'name email picture');
+
+    // Emit socket event to notify both users
+    const io = req.app.get('io');
+    if (io) {
+      // Emit status update event
+      io.emit("request_status_updated", {
+        requestId: request._id,
+        requestTitle: request.title,
+        status: 'completed',
+        helperId: request.helper.toString(),
+        requesterId: request.requester.toString(),
+        completedBy: req.user.id,
+        completedByName: req.user.name
+      });
+
+      console.log("✅ Emitted request completion event for:", request.title);
+    }
+
+    res.json(populatedRequest);
+  } catch (error) {
+    console.error("Error completing request:", error);
+    res.status(500).json({ error: "Failed to complete request" });
+  }
+});
+
+// Get categories
+router.get("/categories/all", async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ name: 1 });
+    res.json(categories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
   }
 });
 

@@ -1,17 +1,21 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "skillwave-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "lint": "eslint .",
+    "build:dev": "cp env.development .env && vite build",
+    "build:prod": "cp env.production .env && vite build",
     "preview": "vite preview",
-    "backend:install": "cd backend && npm install",
-    "backend:start": "cd backend && npm start",
-    "start": "node backend/server.js"
+    "preview:dev": "cp env.development .env && vite preview",
+    "preview:prod": "cp env.production .env && vite preview",
+    "lint": "eslint .",
+    "deploy:dev": "npm run build:dev",
+    "deploy:prod": "npm run build:prod",
+    "configure": "node configure-deployment.js",
+    "update-urls": "node update-urls.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -44,6 +48,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@react-oauth/google": "^0.12.2",
     "@tanstack/react-query": "^5.56.2",
+    "axios": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

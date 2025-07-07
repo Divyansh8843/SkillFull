@@ -11,7 +11,7 @@ class MockDatabase {
   async init() {
     try {
       await fs.mkdir(this.dataDir, { recursive: true });
-
+      
       // Initialize data files if they don't exist
       const files = {
         "users.json": [],

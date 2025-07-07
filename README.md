@@ -1,73 +1,157 @@
-# Welcome to your Lovable project
+# SkillWave Connect
 
-## Project info
+A peer-to-peer learning platform where students can help each other with academic and skill-based requests.
 
-**URL**: https://lovable.dev/projects/6b859e5c-f3ea-425e-ba90-ef078f1c3ba3
+## 🚀 Features
 
-## How can I edit this code?
+- **Google OAuth Authentication** - Secure login with Google
+- **Real-time Messaging** - Socket.io powered chat
+- **Request Management** - Create, accept, and complete help requests
+- **Category System** - Organized by subject areas
+- **User Profiles** - Skills, ratings, and reviews
+- **Responsive Design** - Works on all devices
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+### Frontend
+- React 18 + TypeScript
+- Vite (Build tool)
+- Axios (HTTP client)
+- Socket.io Client (Real-time)
+- Tailwind CSS + shadcn/ui
+- React Router DOM
+- React Query
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6b859e5c-f3ea-425e-ba90-ef078f1c3ba3) and start prompting.
+### Backend
+- Node.js + Express.js
+- MongoDB + Mongoose
+- Socket.io (Real-time)
+- JWT Authentication
+- Google OAuth
 
-Changes made via Lovable will be committed automatically to this repo.
+## 📦 Installation
 
-**Use your preferred IDE**
+### Prerequisites
+- Node.js (v16 or higher)
+- MongoDB (local or cloud)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Backend Setup
+```bash
+cd backend
+npm install
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Create a `.env` file in the backend directory:
+```env
+MONGODB_URI=mongodb://localhost:27017/skillwave
+JWT_SECRET=your-secret-key
+FRONTEND_URL=http://localhost:8000
+```
 
-Follow these steps:
+Seed the database:
+```bash
+npm run seed
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Start the backend:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Frontend Setup
+```bash
+npm install
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env` file in the root directory:
+```env
+VITE_API_URL=http://localhost:3001/api
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+```
 
-**Use GitHub Codespaces**
+Start the frontend:
+```bash
+npm run dev
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🎯 Usage
 
-## What technologies are used for this project?
+1. **Register/Login** - Use Google OAuth to create an account
+2. **Create Requests** - Post help requests in various categories
+3. **Browse Requests** - Find requests that match your skills
+4. **Accept Requests** - Help other students
+5. **Chat** - Real-time messaging with request participants
+6. **Complete Requests** - Mark requests as finished
 
-This project is built with:
+## 📁 Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+├── src/                    # Frontend source
+│   ├── components/         # Reusable UI components
+│   ├── contexts/          # React contexts
+│   ├── pages/             # Route components
+│   ├── services/          # API and socket services
+│   └── utils/             # Helper functions
+├── backend/               # Backend source
+│   ├── models/            # MongoDB models
+│   ├── routes/            # API routes
+│   ├── config/            # Database config
+│   └── scripts/           # Database scripts
+└── README.md
+```
 
-## How can I deploy this project?
+## 🔧 API Endpoints
 
-Simply open [Lovable](https://lovable.dev/projects/6b859e5c-f3ea-425e-ba90-ef078f1c3ba3) and click on Share -> Publish.
+### Authentication
+- `POST /api/auth/google` - Google OAuth login
+- `GET /api/auth/profile` - Get user profile
+- `GET /api/auth/verify` - Verify JWT token
 
-## Can I connect a custom domain to my Lovable project?
+### Requests
+- `GET /api/requests` - Get all requests
+- `POST /api/requests` - Create new request
+- `GET /api/requests/:id` - Get single request
+- `POST /api/requests/:id/accept` - Accept request
+- `POST /api/requests/:id/complete` - Complete request
+- `GET /api/requests/categories/all` - Get categories
 
-Yes, you can!
+## 🚀 Deployment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Backend (Railway/Heroku)
+1. Connect your GitHub repository
+2. Set environment variables
+3. Deploy automatically
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Frontend (Vercel/Netlify)
+1. Connect your GitHub repository
+2. Set build command: `npm run build`
+3. Set environment variables
+4. Deploy automatically
+
+## 📝 Environment Variables
+
+### Backend (.env)
+```env
+MONGODB_URI=mongodb://localhost:27017/skillwave
+JWT_SECRET=your-secret-key
+FRONTEND_URL=http://localhost:8000
+NODE_ENV=development
+```
+
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:3001/api
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.

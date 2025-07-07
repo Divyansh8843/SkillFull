@@ -26,7 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import apiService from "../services/api";
 
 interface Category {
-  id: number;
+  _id: string;
   name: string;
   description: string;
   icon: string;
@@ -65,26 +65,26 @@ const SendRequest = () => {
       // Use fallback categories if API fails
       setCategories([
         {
-          id: 1,
+          _id: "1",
           name: "Programming",
           description: "Software development",
           icon: "code",
         },
-        { id: 2, name: "Design", description: "UI/UX design", icon: "palette" },
+        { _id: "2", name: "Design", description: "UI/UX design", icon: "palette" },
         {
-          id: 3,
+          _id: "3",
           name: "Mathematics",
           description: "Math problems",
           icon: "calculator",
         },
         {
-          id: 4,
+          _id: "4",
           name: "Languages",
           description: "Language learning",
           icon: "globe",
         },
-        { id: 5, name: "Writing", description: "Content writing", icon: "pen" },
-        { id: 6, name: "Other", description: "Other subjects", icon: "help" },
+        { _id: "5", name: "Writing", description: "Content writing", icon: "pen" },
+        { _id: "6", name: "Other", description: "Other subjects", icon: "help" },
       ]);
     }
   };
@@ -118,27 +118,20 @@ const SendRequest = () => {
 
     setLoading(true);
     try {
-      // For now, save to localStorage since backend is not running
       const requestData = {
-        id: Date.now().toString(),
-        ...formData,
-        categoryId: parseInt(formData.categoryId),
+        title: formData.title,
+        description: formData.description,
+        categoryId: formData.categoryId,
         skillsNeeded: skills,
+        urgency: formData.urgency,
+        estimatedDuration: formData.estimatedDuration,
+        location: formData.location,
+        isRemote: formData.isRemote,
         budgetMin: formData.budgetMin ? parseFloat(formData.budgetMin) : null,
         budgetMax: formData.budgetMax ? parseFloat(formData.budgetMax) : null,
-        requesterName: user?.name,
-        requesterEmail: user?.email,
-        requesterPicture: user?.picture,
-        status: "open",
-        createdAt: new Date().toISOString(),
       };
 
-      // Save to localStorage
-      const existingRequests = JSON.parse(
-        localStorage.getItem("helpRequests") || "[]"
-      );
-      existingRequests.push(requestData);
-      localStorage.setItem("helpRequests", JSON.stringify(existingRequests));
+      await apiService.createRequest(requestData);
 
       toast({
         title: "Success",
@@ -159,38 +152,39 @@ const SendRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Navigation />
 
-      <div className="container mx-auto px-4 py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         <div className="max-w-2xl mx-auto">
-          <Card>
+          <Card className="bg-slate-800 border-slate-700 text-white">
             <CardHeader>
-              <CardTitle className="text-2xl text-center">
+              <CardTitle className="text-2xl text-center text-white">
                 Post a Help Request
               </CardTitle>
-              <CardDescription className="text-center">
+              <CardDescription className="text-center text-slate-300">
                 Describe what you need help with and connect with skilled peers
               </CardDescription>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="text-white">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Title */}
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
+                  <Label htmlFor="title" className="text-white">Title *</Label>
                   <Input
                     id="title"
                     placeholder="What do you need help with?"
                     value={formData.title}
                     onChange={(e) => handleInputChange("title", e.target.value)}
                     required
+                    className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                   />
                 </div>
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
+                  <Label htmlFor="description" className="text-white">Description *</Label>
                   <Textarea
                     id="description"
                     placeholder="Provide more details about your request..."
@@ -200,24 +194,26 @@ const SendRequest = () => {
                     }
                     rows={4}
                     required
+                    className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                   />
                 </div>
 
                 {/* Category */}
                 <div className="space-y-2">
-                  <Label>Category *</Label>
+                  <Label className="text-white">Category *</Label>
                   <Select
                     onValueChange={(value) =>
                       handleInputChange("categoryId", value)
                     }>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white focus:border-cyan-400">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-slate-700 border-slate-600">
                       {categories.map((category) => (
                         <SelectItem
-                          key={category.id}
-                          value={category.id.toString()}>
+                          key={category._id}
+                          value={category._id}
+                          className="text-white hover:bg-slate-600">
                           {category.name}
                         </SelectItem>
                       ))}
@@ -227,7 +223,7 @@ const SendRequest = () => {
 
                 {/* Skills Needed */}
                 <div className="space-y-2">
-                  <Label>Skills Needed</Label>
+                  <Label className="text-white">Skills Needed</Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Add a skill"
@@ -236,8 +232,9 @@ const SendRequest = () => {
                       onKeyPress={(e) =>
                         e.key === "Enter" && (e.preventDefault(), addSkill())
                       }
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                     />
-                    <Button type="button" onClick={addSkill} variant="outline">
+                    <Button type="button" onClick={addSkill} variant="outline" className="border-slate-600 text-white hover:bg-slate-600">
                       Add
                     </Button>
                   </div>
@@ -246,7 +243,7 @@ const SendRequest = () => {
                       <Badge
                         key={skill}
                         variant="secondary"
-                        className="cursor-pointer"
+                        className="cursor-pointer bg-slate-600 text-white hover:bg-slate-500"
                         onClick={() => removeSkill(skill)}>
                         {skill} ×
                       </Badge>
@@ -256,28 +253,28 @@ const SendRequest = () => {
 
                 {/* Urgency */}
                 <div className="space-y-2">
-                  <Label>Urgency</Label>
+                  <Label className="text-white">Urgency</Label>
                   <Select
                     onValueChange={(value) =>
                       handleInputChange("urgency", value)
                     }
                     defaultValue="medium">
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white focus:border-cyan-400">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low - Can wait</SelectItem>
-                      <SelectItem value="medium">
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectItem value="low" className="text-white hover:bg-slate-600">Low - Can wait</SelectItem>
+                      <SelectItem value="medium" className="text-white hover:bg-slate-600">
                         Medium - Within a week
                       </SelectItem>
-                      <SelectItem value="high">High - Urgent</SelectItem>
+                      <SelectItem value="high" className="text-white hover:bg-slate-600">High - Urgent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Duration */}
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Estimated Duration</Label>
+                  <Label htmlFor="duration" className="text-white">Estimated Duration</Label>
                   <Input
                     id="duration"
                     placeholder="e.g., 2 hours, 1 day, 1 week"
@@ -285,6 +282,7 @@ const SendRequest = () => {
                     onChange={(e) =>
                       handleInputChange("estimatedDuration", e.target.value)
                     }
+                    className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                   />
                 </div>
 
@@ -294,16 +292,18 @@ const SendRequest = () => {
                     <Switch
                       id="remote"
                       checked={formData.isRemote}
+                      
                       onCheckedChange={(checked) =>
                         handleInputChange("isRemote", checked)
                       }
+                      className="data-[state=checked]:bg-cyan-400 data-[state=unchecked]:bg-slate-600"
                     />
-                    <Label htmlFor="remote">Remote help is okay</Label>
+                    <Label htmlFor="remote" className="text-white">Remote help is okay</Label>
                   </div>
 
                   {!formData.isRemote && (
                     <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
+                      <Label htmlFor="location" className="text-white">Location</Label>
                       <Input
                         id="location"
                         placeholder="Where do you need help?"
@@ -311,6 +311,7 @@ const SendRequest = () => {
                         onChange={(e) =>
                           handleInputChange("location", e.target.value)
                         }
+                        className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                       />
                     </div>
                   )}
@@ -318,7 +319,7 @@ const SendRequest = () => {
 
                 {/* Budget */}
                 <div className="space-y-2">
-                  <Label>Budget (Optional)</Label>
+                  <Label className="text-white">Budget (Optional)</Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Min $"
@@ -327,6 +328,7 @@ const SendRequest = () => {
                       onChange={(e) =>
                         handleInputChange("budgetMin", e.target.value)
                       }
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                     />
                     <Input
                       placeholder="Max $"
@@ -335,11 +337,12 @@ const SendRequest = () => {
                       onChange={(e) =>
                         handleInputChange("budgetMax", e.target.value)
                       }
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-cyan-400"
                     />
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white" disabled={loading}>
                   {loading ? "Posting..." : "Post Request"}
                 </Button>
               </form>

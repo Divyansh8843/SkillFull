@@ -16,6 +16,6 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "https://your-backend-url.railway.app/api"
+    "VITE_BACKEND_URL": "https://your-backend-url.onrender.com"
   }
 }

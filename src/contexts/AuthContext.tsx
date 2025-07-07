@@ -20,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   updateProfile: (userData: Partial<User>) => Promise<void>;
+  retryConnection: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,87 +38,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    // Check if user is already logged in (fallback to localStorage)
     const initializeAuth = async () => {
       try {
-        // Try to get user from localStorage first
-        const savedUser = localStorage.getItem("skillEdgeUser");
-        if (savedUser) {
-          try {
-            const userData = JSON.parse(savedUser);
-            setUser(userData);
-            setLoading(false);
-            return;
-          } catch (error) {
-            localStorage.removeItem("skillEdgeUser");
-          }
-        }
-
-        // If backend is available, try API
+        console.log("🔐 Initializing auth...");
         const token = localStorage.getItem("authToken");
+        console.log("Stored token:", token ? "exists" : "not found");
+        
         if (token) {
           try {
+            console.log("🔍 Validating token...");
             apiService.setToken(token);
             const userData = await apiService.getProfile();
+            console.log("✅ User data loaded:", userData);
             setUser(userData);
 
             // Connect to socket if available
             socketService.connect(userData.id);
           } catch (error) {
-            // Backend not available, clear token
-            localStorage.removeItem("authToken");
+            console.error("❌ Token validation failed:", error);
+            
+            // Only remove token if it's an authentication error, not a network error
+            if (error.message.includes("401") || error.message.includes("Unauthorized") || error.message.includes("Token")) {
+              console.log("🔒 Authentication error - removing token");
+              localStorage.removeItem("authToken");
+            } else {
+              console.log("🌐 Network error - keeping token for retry");
+              // Keep the token and user data for retry when backend comes back online
+              if (retryCount < 3) {
+                console.log(`🔄 Retrying in 5 seconds... (${retryCount + 1}/3)`);
+                setTimeout(() => {
+                  setRetryCount(prev => prev + 1);
+                }, 5000);
+              } else {
+                console.log("❌ Max retries reached - user will need to refresh manually");
+              }
+            }
           }
+        } else {
+          console.log("ℹ️ No token found, user not authenticated");
         }
       } catch (error) {
-        console.error("Auth initialization failed:", error);
+        console.error("❌ Auth initialization failed:", error);
       } finally {
         setLoading(false);
+        console.log("🏁 Auth initialization complete");
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [retryCount]);
 
   const login = async (googleUser: any) => {
     try {
       setLoading(true);
 
-      // Try API first, fallback to localStorage
-      try {
-        const response = await apiService.loginWithGoogle({
-          email: googleUser.email,
-          name: googleUser.name,
-          googleId: googleUser.id,
-          picture: googleUser.picture,
-        });
+      const response = await apiService.loginWithGoogle({
+        email: googleUser.email,
+        name: googleUser.name,
+        googleId: googleUser.id,
+        picture: googleUser.picture,
+      });
 
-        setUser(response.user);
-        // Also save to localStorage as backup
-        localStorage.setItem("skillEdgeUser", JSON.stringify(response.user));
+      setUser(response.user);
 
-        // Connect to socket if available
-        socketService.connect(response.user.id);
-      } catch (apiError) {
-        // Backend not available, use localStorage
-        console.log("Backend not available, using localStorage authentication");
-
-        const user = {
-          id: googleUser.id,
-          name: googleUser.name,
-          email: googleUser.email,
-          picture: googleUser.picture,
-          bio: "",
-          skills: [],
-          rating: 0,
-          totalReviews: 0,
-        };
-
-        console.log("Storing user data in localStorage:", user);
-        setUser(user);
-        localStorage.setItem("skillEdgeUser", JSON.stringify(user));
-      }
+      // Connect to socket if available
+      socketService.connect(response.user.id);
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -128,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("skillEdgeUser");
     apiService.logout();
     socketService.disconnect();
   };
@@ -143,6 +130,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const retryConnection = () => {
+    setRetryCount(0);
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -150,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     logout,
     loading,
     updateProfile,
+    retryConnection,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

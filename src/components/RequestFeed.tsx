@@ -1,11 +1,29 @@
 import { useState } from "react";
 
 interface HelpRequest {
-  id: string;
-  studentName: string;
-  subject: string;
+  _id: string;
+  title: string;
   description: string;
-  timestamp: Date;
+  category: {
+    _id: string;
+    name: string;
+    description: string;
+    icon: string;
+  };
+  requester: {
+    _id: string;
+    name: string;
+    email: string;
+    picture?: string;
+  };
+  urgency: "low" | "medium" | "high";
+  estimatedDuration?: string;
+  location?: string;
+  isRemote: boolean;
+  budgetMin?: number;
+  budgetMax?: number;
+  status: "open" | "in_progress" | "completed";
+  createdAt: string;
 }
 
 interface RequestFeedProps {
@@ -18,8 +36,9 @@ const RequestFeed = ({ requests, onAcceptRequest }: RequestFeedProps) => {
 
   const filteredRequests = requests.filter(
     (request) =>
-      request.subject.toLowerCase().includes(filter.toLowerCase()) ||
-      request.description.toLowerCase().includes(filter.toLowerCase())
+      request.title.toLowerCase().includes(filter.toLowerCase()) ||
+      request.description.toLowerCase().includes(filter.toLowerCase()) ||
+      request.category.name.toLowerCase().includes(filter.toLowerCase())
   );
 
   const formatTimeAgo = (date: Date) => {
@@ -40,7 +59,7 @@ const RequestFeed = ({ requests, onAcceptRequest }: RequestFeedProps) => {
 
   return (
     <section id="requests" className="py-16 bg-slate-900/50">
-      <div className="container mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">
             Live Help Requests
@@ -66,19 +85,19 @@ const RequestFeed = ({ requests, onAcceptRequest }: RequestFeedProps) => {
           {filteredRequests.length > 0 ? (
             filteredRequests.map((request) => (
               <div
-                key={request.id}
+                key={request._id}
                 className="bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-105">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full flex items-center justify-center text-white font-semibold">
-                      {request.studentName.charAt(0).toUpperCase()}
+                      {request.requester.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="font-semibold text-white">
-                        {request.studentName}
+                        {request.requester.name}
                       </h3>
                       <p className="text-sm text-slate-400">
-                        {formatTimeAgo(request.timestamp)}
+                        {formatTimeAgo(new Date(request.createdAt))}
                       </p>
                     </div>
                   </div>
@@ -86,7 +105,7 @@ const RequestFeed = ({ requests, onAcceptRequest }: RequestFeedProps) => {
 
                 <div className="mb-4">
                   <div className="inline-block bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-sm font-medium mb-3">
-                    {request.subject}
+                    {request.category.name}
                   </div>
                   <p className="text-slate-300 text-sm leading-relaxed">
                     {request.description}

@@ -1,6 +1,52 @@
-const API_BASE_URL = import.meta.env.PROD
-  ? null // Will use localStorage fallback in production for now
-  : "http://localhost:3001/api";
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : "http://localhost:3001/api";
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message);
+    
+    // Add more specific error information
+    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+      error.message = 'Backend server is not accessible. Please check if the server is running.';
+    } else if (error.response?.status === 401) {
+      error.message = 'Authentication failed. Please log in again.';
+    } else if (error.response?.status === 404) {
+      error.message = 'Resource not found.';
+    } else if (error.response?.status >= 500) {
+      error.message = 'Server error. Please try again later.';
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 class ApiService {
   constructor() {
@@ -16,222 +62,245 @@ class ApiService {
     }
   }
 
-  getHeaders() {
-    const headers = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
-
-    return headers;
-  }
-
-  async request(endpoint, options = {}) {
-    // If no API_BASE_URL in production, use localStorage fallback
-    if (!API_BASE_URL) {
-      return this.handleLocalStorageFallback(endpoint, options);
-    }
-
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: this.getHeaders(),
-      ...options,
-    };
-
-    console.log(`Making API request to: ${url}`, {
-      method: config.method || "GET",
-      headers: config.headers,
-      body: config.body,
-    });
-
-    try {
-      const response = await fetch(url, config);
-
-      console.log(`API response status: ${response.status}`, response);
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Request failed" }));
-        console.error("API error response:", errorData);
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("API response data:", result);
-      return result;
-    } catch (error) {
-      console.error("API request failed:", error);
-      if (error.name === "TypeError" && error.message.includes("fetch")) {
-        throw new Error(
-          "Cannot connect to server. Please check if the backend is running."
-        );
-      }
-      throw error;
-    }
-  }
-
-  // LocalStorage fallback for production demo
-  async handleLocalStorageFallback(endpoint, options = {}) {
-    console.log("Using localStorage fallback for:", endpoint);
-
-    if (endpoint === "/requests" && options.method === "POST") {
-      // Create request
-      const requests = JSON.parse(localStorage.getItem("helpRequests") || "[]");
-      const newRequest = {
-        id: Date.now(),
-        ...JSON.parse(options.body),
-        status: "open",
-        createdAt: new Date().toISOString(),
-      };
-      requests.push(newRequest);
-      localStorage.setItem("helpRequests", JSON.stringify(requests));
-      return newRequest;
-    }
-
-    if (endpoint === "/requests" || endpoint.includes("/requests?")) {
-      // Get requests
-      const requests = JSON.parse(localStorage.getItem("helpRequests") || "[]");
-      return requests;
-    }
-
-    if (endpoint.includes("/accept")) {
-      // Accept request
-      return { success: true, message: "Request accepted" };
-    }
-
-    // Default fallback
-    return { success: true, data: [] };
-  }
-
   // Auth methods
   async loginWithGoogle(userData) {
-    const response = await this.request("/auth/google", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-
-    if (response.token) {
-      this.setToken(response.token);
+    try {
+      const response = await api.post("/auth/google", userData);
+      if (response.token) {
+        this.setToken(response.token);
+      }
+      return response;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Login failed");
     }
-
-    return response;
   }
 
   async getProfile() {
-    return this.request("/auth/profile");
+    try {
+      return await api.get("/auth/profile");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get profile");
+    }
   }
 
   async verifyToken() {
-    return this.request("/auth/verify");
+    try {
+      return await api.get("/auth/verify");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Token verification failed");
+    }
   }
 
   // User methods
   async updateProfile(userData) {
-    return this.request("/users/profile", {
-      method: "PUT",
-      body: JSON.stringify(userData),
-    });
+    try {
+      return await api.put("/users/profile", userData);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Profile update failed");
+    }
   }
 
   async getUserById(userId) {
-    return this.request(`/users/${userId}`);
+    try {
+      return await api.get(`/users/${userId}`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get user");
+    }
   }
 
   // Request methods
   async createRequest(requestData) {
-    return this.request("/requests", {
-      method: "POST",
-      body: JSON.stringify(requestData),
-    });
+    try {
+      return await api.post("/requests", requestData);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to create request");
+    }
   }
 
   async getRequests(filters = {}) {
-    const queryParams = new URLSearchParams(filters).toString();
-    return this.request(`/requests${queryParams ? `?${queryParams}` : ""}`);
+    try {
+      const params = new URLSearchParams(filters);
+      return await api.get(`/requests?${params.toString()}`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get requests");
+    }
   }
 
   async getRequestById(requestId) {
-    return this.request(`/requests/${requestId}`);
+    try {
+      return await api.get(`/requests/${requestId}`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get request");
+    }
   }
 
   async updateRequest(requestId, updateData) {
-    return this.request(`/requests/${requestId}`, {
-      method: "PUT",
-      body: JSON.stringify(updateData),
-    });
+    try {
+      return await api.put(`/requests/${requestId}`, updateData);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to update request");
+    }
   }
 
   async acceptRequest(requestId) {
-    return this.request(`/requests/${requestId}/accept`, {
-      method: "POST",
-    });
+    try {
+      return await api.post(`/requests/${requestId}/accept`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to accept request");
+    }
   }
 
   async completeRequest(requestId) {
-    return this.request(`/requests/${requestId}/complete`, {
-      method: "POST",
-    });
-  }
-
-  // Message methods
-  async getMessages(requestId) {
-    return this.request(`/messages/request/${requestId}`);
-  }
-
-  async sendMessage(messageData) {
-    return this.request("/messages", {
-      method: "POST",
-      body: JSON.stringify(messageData),
-    });
-  }
-
-  async markMessagesAsRead(requestId) {
-    return this.request(`/messages/request/${requestId}/read`, {
-      method: "PUT",
-    });
+    try {
+      return await api.post(`/requests/${requestId}/complete`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to complete request");
+    }
   }
 
   // Category methods
   async getCategories() {
-    return this.request("/categories");
+    try {
+      return await api.get("/requests/categories/all");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get categories");
+    }
+  }
+
+  // Message methods
+  async getMessages(requestId) {
+    try {
+      return await api.get(`/messages/request/${requestId}`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get messages");
+    }
+  }
+
+  async sendMessage(messageData) {
+    try {
+      return await api.post("/messages", messageData);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to send message");
+    }
+  }
+
+  async markMessagesAsRead(requestId) {
+    try {
+      return await api.put(`/messages/request/${requestId}/read`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to mark messages as read");
+    }
+  }
+
+  async uploadFile(formData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/messages/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        // Handle different types of error responses
+        let errorMessage = "Failed to upload file";
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, try to get text response
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            // If all else fails, use status text
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw new Error(error.message || "Failed to upload file");
+    }
   }
 
   // Review methods
   async createReview(reviewData) {
-    return this.request("/reviews", {
-      method: "POST",
-      body: JSON.stringify(reviewData),
-    });
+    try {
+      return await api.post("/reviews", reviewData);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to create review");
+    }
   }
 
   async getReviews(userId) {
-    return this.request(`/reviews/user/${userId}`);
+    try {
+      return await api.get(`/reviews/user/${userId}`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get reviews");
+    }
   }
 
   // Notification methods
+  async getUnreadMessageCount() {
+    try {
+      return await api.get("/messages/unread/count");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get unread count");
+    }
+  }
+
+  async markAllMessagesAsRead() {
+    try {
+      return await api.put("/messages/read-all");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to mark all messages as read");
+    }
+  }
   async getNotifications() {
-    return this.request("/notifications");
+    try {
+      return await api.get("/notifications");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to get notifications");
+    }
   }
 
   async markNotificationAsRead(notificationId) {
-    return this.request(`/notifications/${notificationId}/read`, {
-      method: "PUT",
-    });
+    try {
+      return await api.put(`/notifications/${notificationId}/read`);
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to mark notification as read");
+    }
   }
 
   async markAllNotificationsAsRead() {
-    return this.request("/notifications/read-all", {
-      method: "PUT",
-    });
+    try {
+      return await api.put("/notifications/read-all");
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to mark all notifications as read");
+    }
+  }
+
+  // Health check
+  async healthCheck() {
+    try {
+      const response = await api.get("/health");
+      console.log("✅ Backend health check passed:", response);
+      return response;
+    } catch (error) {
+      console.error("❌ Backend health check failed:", error);
+      throw new Error("Backend server is not accessible");
+    }
   }
 
   logout() {
     this.setToken(null);
+    localStorage.removeItem("authToken");
   }
 }
 
