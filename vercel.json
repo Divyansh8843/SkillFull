@@ -16,6 +16,6 @@
     }
   ],
   "env": {
-    "VITE_BACKEND_URL": "https://your-backend-url.onrender.com"
+    "VITE_BACKEND_URL": "https://skillfull-essr.onrender.com"
   }
 }

@@ -13,9 +13,7 @@
     "preview:prod": "cp env.production .env && vite preview",
     "lint": "eslint .",
     "deploy:dev": "npm run build:dev",
-    "deploy:prod": "npm run build:prod",
-    "configure": "node configure-deployment.js",
-    "update-urls": "node update-urls.js"
+    "deploy:prod": "npm run build:prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
