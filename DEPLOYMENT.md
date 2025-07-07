@@ -99,14 +99,14 @@ After getting your Vercel URL, update the `FRONTEND_URL` environment variable in
 ```
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 JWT_SECRET=your-secret-key
-FRONTEND_URL=https://your-frontend.vercel.app
+FRONTEND_URL=https://skillfull-essr.vercel.app
 PORT=3001
 NODE_ENV=production
 ```
 
 ### Frontend (Vercel)
 ```
-VITE_BACKEND_URL=https://your-backend.onrender.com
+VITE_BACKEND_URL=https://skillfull-essr.onrender.com
 ```
 
 ## 🎉 Success!
