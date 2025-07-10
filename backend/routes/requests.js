@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const HelpRequest = require("../models/HelpRequest");
 const Category = require("../models/Category");
 const User = require("../models/User");
+const { sendEmail } = require('../emailService');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
@@ -133,6 +134,16 @@ router.post("/", authenticateToken, [
       .populate('requester', 'name email picture')
       .populate('category', 'name description icon');
 
+    try {
+      await sendEmail({
+        to: populatedRequest.requester.email,
+        subject: `Your help request has been created: ${populatedRequest.title}`,
+        text: `Hi ${populatedRequest.requester.name},\n\nYour help request titled '${populatedRequest.title}' has been successfully created.\n\nDescription: ${populatedRequest.description}\n\nThank you for using SkillFull!`,
+      });
+    } catch (e) {
+      console.error('Failed to send creation email:', e);
+    }
+
     res.status(201).json(populatedRequest);
   } catch (error) {
     console.error("Error creating request:", error);
@@ -194,6 +205,23 @@ router.post("/:id/accept", authenticateToken, async (req, res) => {
       console.log("🎉 Emitted request_accepted event for:", request.title);
     }
 
+    try {
+      // Notify requester
+      await sendEmail({
+        to: populatedRequest.requester.email,
+        subject: `Your request has been accepted!`,
+        text: `Hi ${populatedRequest.requester.name},\n\nYour request '${populatedRequest.title}' has been accepted by ${populatedRequest.helper.name}.\n\nYou can now chat and collaborate.`,
+      });
+      // Notify helper
+      await sendEmail({
+        to: populatedRequest.helper.email,
+        subject: `You accepted a request!`,
+        text: `Hi ${populatedRequest.helper.name},\n\nYou have accepted the request '${populatedRequest.title}'.\n\nPlease reach out to the requester to get started.`,
+      });
+    } catch (e) {
+      console.error('Failed to send acceptance email:', e);
+    }
+
     res.json(populatedRequest);
   } catch (error) {
     console.error("Error accepting request:", error);
@@ -242,6 +270,23 @@ router.post("/:id/complete", authenticateToken, async (req, res) => {
       });
 
       console.log("✅ Emitted request completion event for:", request.title);
+    }
+
+    try {
+      // Notify requester
+      await sendEmail({
+        to: populatedRequest.requester.email,
+        subject: `Your help request has been completed!`,
+        text: `Hi ${populatedRequest.requester.name},\n\nYour help request '${populatedRequest.title}' has been marked as completed by ${populatedRequest.helper.name}.\n\nThank you for using SkillFull!`,
+      });
+      // Notify helper
+      await sendEmail({
+        to: populatedRequest.helper.email,
+        subject: `You completed a help request!`,
+        text: `Hi ${populatedRequest.helper.name},\n\nYou have marked the request '${populatedRequest.title}' as completed.\n\nThank you for helping on SkillFull!`,
+      });
+    } catch (e) {
+      console.error('Failed to send completion email:', e);
     }
 
     res.json(populatedRequest);

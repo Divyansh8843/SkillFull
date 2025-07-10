@@ -31,7 +31,7 @@ async function testDatabaseConnection() {
   
   try {
     // Try to connect with default MongoDB URI
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/skillwave';
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/skillbridge';
     await mongoose.connect(mongoURI);
     console.log('✅ Database connection successful');
     

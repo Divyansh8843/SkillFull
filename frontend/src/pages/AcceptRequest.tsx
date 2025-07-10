@@ -15,6 +15,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -677,21 +678,28 @@ const AcceptRequest = () => {
                             </div>
                           </div>
 
-                          <div className="flex gap-2 mt-4">
+                          
+                          
+                        </CardContent>
+                        <CardFooter className="w-full ">
+                        <div className="flex gap-2">
                             <Button
                               onClick={() => openMessages(request)}
+                              
                               className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600">
-                              <MessageCircle className="h-4 w-4 mr-2" />
+                              <MessageCircle className="h-4 w-4" />
                               Chat with Requester
                             </Button>
                             <Button
+                              
                               onClick={() => handleCompleteRequest(request)}
                               className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-                              <CheckCircle className="h-4 w-4 mr-2" />
+                              <CheckCircle className="h-4 w-4" />
                               Complete Request
                             </Button>
+        
                           </div>
-                        </CardContent>
+                        </CardFooter>
                       </Card>
                     ))}
                   </div>

@@ -8,6 +8,7 @@ const fs = require("fs");
 const Message = require("../models/Message");
 const HelpRequest = require("../models/HelpRequest");
 const User = require("../models/User");
+const { sendEmail } = require('../emailService');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -145,6 +146,21 @@ router.post("/", authenticateToken, [
     });
 
     await newMessage.save();
+
+    // Determine recipient (other party)
+    let recipient;
+    if (request.requester.toString() === req.user.id) {
+      recipient = await User.findById(request.helper);
+    } else {
+      recipient = await User.findById(request.requester);
+    }
+    if (recipient && recipient.email) {
+      await sendEmail({
+        to: recipient.email,
+        subject: `New message on request: ${request.title}`,
+        text: `Hi ${recipient.name},\n\nYou have a new message from ${user.name} regarding the request '${request.title}':\n\n${content}\n\nPlease log in to SkillFull to reply.`,
+      });
+    }
 
     // Create response object with user details
     const messageResponse = {

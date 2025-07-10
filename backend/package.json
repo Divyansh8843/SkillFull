@@ -1,7 +1,7 @@
 {
-  "name": "skillwave-backend",
+  "name": "skillbridge-backend",
   "version": "1.0.0",
-  "description": "Backend API for SkillWave Connect platform",
+  "description": "Backend API for Skillbridge Connect platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -17,6 +17,7 @@
     "postinstall": "npm run build"
   },
   "dependencies": {
+    "axios": "^1.10.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -28,7 +29,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "^6.10.1",
     "socket.io": "^4.7.4",
     "socket.io-client": "^4.7.4"
   },

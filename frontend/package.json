@@ -1,5 +1,5 @@
 {
-  "name": "skillwave-frontend",
+  "name": "skillbridge-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -46,7 +46,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@react-oauth/google": "^0.12.2",
     "@tanstack/react-query": "^5.56.2",
-    "axios": "^1.6.0",
+    "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
